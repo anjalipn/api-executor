@@ -18,12 +18,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class TaskController {
 
     @Autowired
-    private QueueChannel taskQueue;
+    private QueueChannel taskExecutionQueue;
 
     @PostMapping("/run-task")
     public ResponseEntity<ApiResponse> runTask(@Valid @RequestBody TaskRequest request) {
         // Send the taskId to the queue
-        taskQueue.send(MessageBuilder.withPayload(request.getTaskId()).build());
+        taskExecutionQueue.send(MessageBuilder.withPayload(request.getTaskId()).build());
         
         // For now, return a default async response
         // In a real application, you might want to wait for the actual response
