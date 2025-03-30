@@ -20,9 +20,23 @@ public class IntegrationConfig {
     @Value("${app.message-store.provider}")
     private String messageStoreProvider;
 
+    @Value("${spring.datasource.url}")
+    private String dbUrl;
+
+    @Value("${spring.datasource.username}")
+    private String dbUsername;
+
+    @Value("${spring.datasource.password}")
+    private String dbPassword;
+
+    @Value("${spring.datasource.driver-class-name}")
+    private String dbDriver;
+
     @Bean
     public QueueChannel taskExecutionQueue() {
-        return new QueueChannel();
+        QueueChannel queueChannel = new QueueChannel();
+        queueChannel.setBeanName("taskExecutionQueue");
+        return queueChannel;
     }
 
     @Bean
@@ -40,5 +54,13 @@ public class IntegrationConfig {
             case "oracle" -> new OracleChannelMessageStoreQueryProvider();
             default -> throw new IllegalArgumentException("Unsupported message store provider: " + messageStoreProvider);
         };
+    }
+
+    @Bean
+    public JdbcChannelMessageStore messageStore(JdbcTemplate jdbcTemplate) {
+        JdbcChannelMessageStore messageStore = new JdbcChannelMessageStore();
+        messageStore.setJdbcTemplate(jdbcTemplate);
+        messageStore.setTablePrefix("TASK_EXECUTION_");
+        return messageStore;
     }
 } 

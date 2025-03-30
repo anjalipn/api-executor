@@ -2,23 +2,35 @@ package com.example.api.executor.service;
 
 import com.example.api.executor.model.ApiResponse;
 import com.example.api.executor.model.TaskResponse;
+import com.example.api.executor.model.TaskStatus;
 import org.springframework.integration.annotation.ServiceActivator;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 
-import java.util.UUID;
-
 @Service
 public class TaskMessageHandler {
+    private final WebSocketService webSocketService;
+    private final TaskStatusService taskStatusService;
 
-    @ServiceActivator(inputChannel = "taskQueue")
+    public TaskMessageHandler(WebSocketService webSocketService, TaskStatusService taskStatusService) {
+        this.webSocketService = webSocketService;
+        this.taskStatusService = taskStatusService;
+    }
+
+    @ServiceActivator(inputChannel = "taskExecutionQueue")
     public ApiResponse handleTaskMessage(Message<Integer> message) {
         try {
             Integer taskId = message.getPayload();
             
+            // Create task status record
+            TaskStatus taskStatus = taskStatusService.createTaskStatus(taskId);
+            
             // Simulate task execution logic
             if (shouldExecuteAsync(taskId)) {
-                return ApiResponse.asyncResponse(UUID.randomUUID().toString());
+                ApiResponse response = ApiResponse.asyncResponse(taskStatus.getInvocationId());
+                taskStatusService.updateTaskStatus(taskStatus.getInvocationId(), "COMPLETED", response);
+                webSocketService.sendTaskCompletionNotification(taskStatus.getInvocationId(), response);
+                return response;
             } else {
                 TaskResponse taskResponse = new TaskResponse();
                 taskResponse.setName("Sample Task");
@@ -29,7 +41,9 @@ public class TaskMessageHandler {
                 output.setErrors(new String[]{});
                 
                 taskResponse.setOutput(output);
-                return ApiResponse.syncResponse(taskResponse);
+                ApiResponse response = ApiResponse.syncResponse(taskResponse);
+                taskStatusService.updateTaskStatus(taskStatus.getInvocationId(), "COMPLETED", response);
+                return response;
             }
         } catch (Exception e) {
             // Log the error and rethrow
