@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Executor Design Diagrams</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .diagram-container {
+            background-color: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        h2 {
+            color: #444;
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+    <h1>API Executor Design Diagrams</h1>
+    
+    <div class="diagram-container">
+        <h2>1. Core Components</h2>
+        <div class="mermaid">
+            graph TD
+                A[Runbook Controller] --> B[Task Execution Service]
+                B --> C[HTTP Client Service]
+                B --> D[Task State Manager]
+                D --> E[Task Execution Repository]
+                B --> F[Async Task Monitor]
+                F --> G[Queue Consumer]
+                G --> H[Insights API Client]
+                F --> I[Timeout Scheduler]
+        </div>
+    </div>
+
+    <div class="diagram-container">
+        <h2>2. Database Schema</h2>
+        <div class="mermaid">
+            erDiagram
+                TASK_EXECUTION {
+                    bigint id PK
+                    bigint runbook_id
+                    bigint task_id
+                    varchar status
+                    jsonb request_payload
+                    jsonb response_payload
+                    timestamp created_at
+                    timestamp updated_at
+                    varchar invocation_id
+                    varchar error_message
+                    int timeout_seconds
+                }
+        </div>
+    </div>
+
+    <div class="diagram-container">
+        <h2>3. Message Flow</h2>
+        <div class="mermaid">
+            sequenceDiagram
+                participant Client
+                participant Controller
+                participant TaskService
+                participant HTTPClient
+                participant StateManager
+                participant QueueMonitor
+                participant InsightsAPI
+
+                Client->>Controller: Execute Runbook
+                Controller->>TaskService: Process Runbook
+                loop For each task
+                    TaskService->>HTTPClient: Execute Task
+                    alt Synchronous Task
+                        HTTPClient-->>TaskService: Immediate Response
+                        TaskService->>StateManager: Update State
+                    else Asynchronous Task
+                        HTTPClient-->>TaskService: Response with X-invocation-id
+                        TaskService->>StateManager: Create Pending State
+                        QueueMonitor->>InsightsAPI: Monitor Queue
+                        InsightsAPI-->>QueueMonitor: Task Completion
+                        QueueMonitor->>StateManager: Update State
+                    end
+                end
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            securityLevel: 'loose',
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true
+            }
+        });
+    </script>
+</body>
+</html> 

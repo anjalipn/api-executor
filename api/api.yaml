@@ -1,0 +1,136 @@
+openapi: 3.0.0
+info:
+  title: Task Execution API
+  version: 1.0.0
+  description: API for executing tasks synchronously or asynchronously
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+
+paths:
+  /run-task:
+    post:
+      summary: Execute a task
+      description: |
+        Executes a task based on the provided taskId. The execution can be synchronous or asynchronous.
+        For synchronous tasks, the response will contain the task result.
+        For asynchronous tasks, the response will contain an invocationId that can be used to track the task status.
+      operationId: runTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskRequest'
+            example:
+              taskId: 1
+      responses:
+        '200':
+          description: Task executed successfully
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/SyncTaskResponse'
+                  - $ref: '#/components/schemas/AsyncTaskResponse'
+              examples:
+                sync:
+                  value:
+                    status: "completed"
+                    result: {
+                      "taskResponse": {
+                        "name": "Sample Task",
+                        "status": "SUCCESS",
+                        "output": {
+                          "processedItems": 100,
+                          "errors": []
+                        }
+                      }
+                    }
+                async:
+                  value:
+                    status: "executing"
+                    invocationId: "550e8400-e29b-41d4-a716-446655440000"
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: "INVALID_TASK_ID"
+                message: "Invalid task ID provided"
+        '404':
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: "TASK_NOT_FOUND"
+                message: "Task with ID 1 not found"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: "INTERNAL_ERROR"
+                message: "An unexpected error occurred"
+
+components:
+  schemas:
+    TaskRequest:
+      type: object
+      required:
+        - taskId
+      properties:
+        taskId:
+          type: integer
+          description: Unique identifier of the task to execute
+          example: 1
+
+    SyncTaskResponse:
+      type: object
+      required:
+        - status
+        - result
+      properties:
+        status:
+          type: string
+          enum: [completed]
+          description: Status of the task execution
+        result:
+          type: object
+          description: Result of the task execution
+          additionalProperties: true
+
+    AsyncTaskResponse:
+      type: object
+      required:
+        - status
+        - invocationId
+      properties:
+        status:
+          type: string
+          enum: [executing]
+          description: Status of the task submission
+        invocationId:
+          type: string
+          format: uuid
+          description: Unique identifier for tracking the async task execution
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Error code
+        message:
+          type: string
+          description: Error message
