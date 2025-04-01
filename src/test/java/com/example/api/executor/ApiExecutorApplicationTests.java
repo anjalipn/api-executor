@@ -1,4 +1,4 @@
-package com.example.api_executor;
+package com.example.api.executor;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
