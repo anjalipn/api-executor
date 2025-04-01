@@ -3,7 +3,7 @@ package com.example.api.executor.config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.integration.channel.QueueChannel;
+import org.springframework.integration.store.MessageGroupQueue;
 import org.springframework.integration.config.EnableIntegration;
 import org.springframework.integration.http.outbound.HttpRequestExecutingMessageHandler;
 import org.springframework.integration.jdbc.store.JdbcChannelMessageStore;
@@ -35,7 +35,6 @@ public class IntegrationConfig {
     @Bean
     public HttpRequestExecutingMessageHandler httpOutboundGateway(RestTemplate restTemplate) {
         HttpRequestExecutingMessageHandler handler = new HttpRequestExecutingMessageHandler("http://placeholder");
-        handler.setRestTemplate(restTemplate);
         handler.setExpectedResponseType(String.class);
         return handler;
     }
@@ -47,11 +46,8 @@ public class IntegrationConfig {
 
     // Task Execution Queue
     @Bean
-    public QueueChannel taskExecutionQueue(JdbcChannelMessageStore taskExecutionMessageStore) {
-        QueueChannel queueChannel = new QueueChannel();
-        queueChannel.setBeanName("taskExecutionQueue");
-        queueChannel.setMessageStore(taskExecutionMessageStore);
-        return queueChannel;
+    public MessageGroupQueue taskExecutionQueue(JdbcChannelMessageStore taskExecutionMessageStore) {
+        return new MessageGroupQueue(taskExecutionMessageStore, "taskExecutionGroup");
     }
 
     @Bean
@@ -64,15 +60,13 @@ public class IntegrationConfig {
 
     // Due By Queue
     @Bean
-    public QueueChannel dueByOutputChannel(JdbcChannelMessageStore dueByMessageStore) {
-        QueueChannel queueChannel = new QueueChannel();
-        queueChannel.setBeanName("taskExecutionQueue");
-        queueChannel.setMessageStore(dueByMessageStore);
-        return queueChannel;
+    public MessageGroupQueue dueByOutputChannel(JdbcChannelMessageStore dueByMessageStore) {
+        return new MessageGroupQueue(dueByMessageStore, "dueByGroup");
     }
+
     @Bean
     public JdbcChannelMessageStore dueByMessageStore(DataSource dataSource) {
-        JdbcChannelMessageStore messageStore =  new JdbcChannelMessageStore(dataSource);
+        JdbcChannelMessageStore messageStore = new JdbcChannelMessageStore(dataSource);
         messageStore.setChannelMessageStoreQueryProvider(channelMessageStoreQueryProvider());
         messageStore.setTablePrefix("DUE_BY_");
         return messageStore;
